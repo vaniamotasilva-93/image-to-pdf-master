@@ -1,11 +1,13 @@
 import { useState, useCallback, useEffect } from 'react';
-import { ImageFile, PDFSettings as PDFSettingsType, ConversionProgress as ProgressType, CompressionPreset, ConversionMode } from '@/types/image';
+import { ImageFile, PDFSettings as PDFSettingsType, ConversionProgress as ProgressType, CompressionPreset, ConversionMode, PageLayout } from '@/types/image';
 import { generatePDF, downloadPDF } from '@/lib/pdfGenerator';
 import { ImageUploader } from '@/components/ImageUploader';
 import { ImageList } from '@/components/ImageList';
 import { PDFSettings } from '@/components/PDFSettings';
 import { ConversionModeToggle } from '@/components/ConversionModeToggle';
 import { CompressionSettings } from '@/components/CompressionSettings';
+import { PageLayoutOptions } from '@/components/PageLayoutOptions';
+import { PDFLayoutPreview } from '@/components/PDFLayoutPreview';
 import { SizeEstimate } from '@/components/SizeEstimate';
 import { ConversionProgress } from '@/components/ConversionProgress';
 import { ConvertButton } from '@/components/ConvertButton';
@@ -25,6 +27,7 @@ const DEFAULT_SETTINGS: PDFSettingsType = {
 const Index = () => {
   const [images, setImages] = useState<ImageFile[]>([]);
   const [settings, setSettings] = useState<PDFSettingsType>(DEFAULT_SETTINGS);
+  const [pageLayout, setPageLayout] = useState<PageLayout>('separate');
   const [progress, setProgress] = useState<ProgressType>({
     current: 0,
     total: 0,
@@ -72,20 +75,30 @@ const Index = () => {
     setSettings((prev) => ({ ...prev, conversionMode: mode }));
   }, []);
 
-  const handleConvert = async () => {
+  const handlePageLayoutChange = useCallback((layout: PageLayout) => {
+    setPageLayout(layout);
+  }, []);
+
+  const handleConvert = async (useQuickExport = false) => {
     if (images.length === 0) return;
+
+    // Use quick export settings or current settings
+    const convertSettings = useQuickExport ? {
+      ...DEFAULT_SETTINGS,
+      conversionMode: 'direct' as ConversionMode,
+    } : settings;
 
     try {
       setProgress({ current: 0, total: images.length, status: 'compressing' });
       
-      const blob = await generatePDF(images, settings, setProgress);
+      const blob = await generatePDF(images, convertSettings, setProgress);
       
       const timestamp = new Date().toISOString().slice(0, 10);
       const filename = `images-${timestamp}.pdf`;
       
       downloadPDF(blob, filename);
       
-      toast.success('PDF generated successfully!', {
+      toast.success(useQuickExport ? 'Quick export complete!' : 'PDF generated successfully!', {
         description: `${images.length} image${images.length !== 1 ? 's' : ''} converted to ${filename}`,
       });
     } catch (error) {
@@ -101,6 +114,10 @@ const Index = () => {
       });
     }
   };
+
+  const handleQuickExport = useCallback(() => {
+    handleConvert(true);
+  }, [images]);
 
   const isConverting = progress.status === 'processing' || progress.status === 'compressing';
 
@@ -169,6 +186,12 @@ const Index = () => {
                 disabled={isConverting}
               />
 
+              <PageLayoutOptions
+                layout={pageLayout}
+                onLayoutChange={handlePageLayoutChange}
+                disabled={isConverting}
+              />
+
               <ConversionModeToggle
                 mode={settings.conversionMode}
                 onModeChange={handleConversionModeChange}
@@ -183,15 +206,24 @@ const Index = () => {
                 />
               )}
 
-              {images.length > 0 && settings.conversionMode === 'optimized' && (
+              {images.length > 0 && (
+                <PDFLayoutPreview
+                  images={images}
+                  settings={settings}
+                />
+              )}
+
+              {images.length > 0 && (
                 <SizeEstimate
                   images={images}
                   preset={settings.compression}
+                  conversionMode={settings.conversionMode}
                 />
               )}
 
               <ConvertButton
-                onClick={handleConvert}
+                onClick={() => handleConvert(false)}
+                onQuickExport={handleQuickExport}
                 disabled={isConverting || images.length === 0}
                 loading={isConverting}
                 imageCount={images.length}

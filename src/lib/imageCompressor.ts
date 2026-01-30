@@ -100,8 +100,6 @@ export const estimatePDFSize = (
 ): number => {
   if (images.length === 0) return 0;
   
-  const config = COMPRESSION_PRESETS[preset];
-  
   // Empirical compression ratios based on preset
   const compressionRatios: Record<CompressionPreset, number> = {
     high: 0.75,      // ~25% reduction
@@ -120,6 +118,19 @@ export const estimatePDFSize = (
   const pdfOverhead = 50 * 1024 + images.length * 2 * 1024;
   
   return Math.round(estimatedImageSize + pdfOverhead);
+};
+
+// Estimate PDF size for direct mode (no compression)
+export const estimateDirectPDFSize = (images: ImageFile[]): number => {
+  if (images.length === 0) return 0;
+  
+  // For direct mode, images are embedded as-is
+  const totalImageSize = images.reduce((sum, img) => sum + img.size, 0);
+  
+  // Add PDF overhead: ~50KB base + 2KB per page
+  const pdfOverhead = 50 * 1024 + images.length * 2 * 1024;
+  
+  return Math.round(totalImageSize + pdfOverhead);
 };
 
 // Format bytes to human-readable string
