@@ -1,9 +1,10 @@
 import { useState, useCallback, useEffect } from 'react';
-import { ImageFile, PDFSettings as PDFSettingsType, ConversionProgress as ProgressType, CompressionPreset } from '@/types/image';
+import { ImageFile, PDFSettings as PDFSettingsType, ConversionProgress as ProgressType, CompressionPreset, ConversionMode } from '@/types/image';
 import { generatePDF, downloadPDF } from '@/lib/pdfGenerator';
 import { ImageUploader } from '@/components/ImageUploader';
 import { ImageList } from '@/components/ImageList';
 import { PDFSettings } from '@/components/PDFSettings';
+import { ConversionModeToggle } from '@/components/ConversionModeToggle';
 import { CompressionSettings } from '@/components/CompressionSettings';
 import { SizeEstimate } from '@/components/SizeEstimate';
 import { ConversionProgress } from '@/components/ConversionProgress';
@@ -17,6 +18,7 @@ const DEFAULT_SETTINGS: PDFSettingsType = {
   orientation: 'portrait',
   fitMode: 'fit',
   marginMm: 10,
+  conversionMode: 'optimized',
   compression: 'balanced',
 };
 
@@ -64,6 +66,10 @@ const Index = () => {
 
   const handleCompressionChange = useCallback((preset: CompressionPreset) => {
     setSettings((prev) => ({ ...prev, compression: preset }));
+  }, []);
+
+  const handleConversionModeChange = useCallback((mode: ConversionMode) => {
+    setSettings((prev) => ({ ...prev, conversionMode: mode }));
   }, []);
 
   const handleConvert = async () => {
@@ -163,13 +169,21 @@ const Index = () => {
                 disabled={isConverting}
               />
 
-              <CompressionSettings
-                preset={settings.compression}
-                onPresetChange={handleCompressionChange}
+              <ConversionModeToggle
+                mode={settings.conversionMode}
+                onModeChange={handleConversionModeChange}
                 disabled={isConverting}
               />
 
-              {images.length > 0 && (
+              {settings.conversionMode === 'optimized' && (
+                <CompressionSettings
+                  preset={settings.compression}
+                  onPresetChange={handleCompressionChange}
+                  disabled={isConverting}
+                />
+              )}
+
+              {images.length > 0 && settings.conversionMode === 'optimized' && (
                 <SizeEstimate
                   images={images}
                   preset={settings.compression}
