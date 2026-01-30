@@ -5,7 +5,7 @@ import {
   PAGE_DIMENSIONS,
   ConversionProgress 
 } from '@/types/image';
-import { compressImage, CompressedImage } from '@/lib/imageCompressor';
+import { compressImage } from '@/lib/imageCompressor';
 
 // Calculate image position and size based on fit mode
 const calculateImagePlacement = (
@@ -85,7 +85,7 @@ export const generatePDF = async (
   settings: PDFSettings,
   onProgress?: (progress: ConversionProgress) => void
 ): Promise<Blob> => {
-  const { pageSize, orientation, fitMode, marginMm, compression } = settings;
+  const { pageSize, orientation, fitMode, marginMm, conversionMode, compression } = settings;
   
   // Get page dimensions
   let { width: pageWidth, height: pageHeight } = PAGE_DIMENSIONS[pageSize];
@@ -101,31 +101,49 @@ export const generatePDF = async (
   });
 
   const total = images.length;
-  const compressedImages: CompressedImage[] = [];
+  const processedImages: { dataUrl: string; width: number; height: number }[] = [];
 
-  // Phase 1: Compress all images
+  // Phase 1: Process images (compress if optimized mode, otherwise load directly)
   for (let i = 0; i < images.length; i++) {
     const image = images[i];
     
-    onProgress?.({
-      current: i + 1,
-      total,
-      status: 'compressing',
-      message: `Compressing ${image.name}...`,
-    });
+    if (conversionMode === 'optimized') {
+      onProgress?.({
+        current: i + 1,
+        total,
+        status: 'compressing',
+        message: `Compressing ${image.name}...`,
+      });
 
-    try {
-      const compressed = await compressImage(image, compression);
-      compressedImages.push(compressed);
-    } catch (error) {
-      console.error(`Error compressing image ${image.name}:`, error);
-      throw new Error(`Failed to compress image: ${image.name}`);
+      try {
+        const compressed = await compressImage(image, compression);
+        processedImages.push(compressed);
+      } catch (error) {
+        console.error(`Error compressing image ${image.name}:`, error);
+        throw new Error(`Failed to compress image: ${image.name}`);
+      }
+    } else {
+      // Direct mode: load image without compression
+      onProgress?.({
+        current: i + 1,
+        total,
+        status: 'processing',
+        message: `Loading ${image.name}...`,
+      });
+
+      try {
+        const imgData = await loadImageAsDataUrl(image);
+        processedImages.push(imgData);
+      } catch (error) {
+        console.error(`Error loading image ${image.name}:`, error);
+        throw new Error(`Failed to load image: ${image.name}`);
+      }
     }
   }
 
-  // Phase 2: Generate PDF from compressed images
-  for (let i = 0; i < compressedImages.length; i++) {
-    const compressed = compressedImages[i];
+  // Phase 2: Generate PDF from processed images
+  for (let i = 0; i < processedImages.length; i++) {
+    const processed = processedImages[i];
     const originalImage = images[i];
     
     onProgress?.({
@@ -137,8 +155,8 @@ export const generatePDF = async (
 
     try {
       const placement = calculateImagePlacement(
-        compressed.width,
-        compressed.height,
+        processed.width,
+        processed.height,
         pageWidth,
         pageHeight,
         marginMm,
@@ -149,9 +167,12 @@ export const generatePDF = async (
         pdf.addPage();
       }
 
+      // Determine format based on conversion mode
+      const format = conversionMode === 'direct' ? getImageFormat(originalImage.file.type) : 'JPEG';
+
       pdf.addImage(
-        compressed.dataUrl,
-        'JPEG',
+        processed.dataUrl,
+        format,
         placement.x,
         placement.y,
         placement.width,
@@ -173,6 +194,45 @@ export const generatePDF = async (
   });
 
   return pdf.output('blob');
+};
+
+// Load image directly without compression
+const loadImageAsDataUrl = (image: ImageFile): Promise<{ dataUrl: string; width: number; height: number }> => {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext('2d');
+      
+      if (!ctx) {
+        reject(new Error('Failed to get canvas context'));
+        return;
+      }
+      
+      ctx.drawImage(img, 0, 0);
+      
+      // Use original format if possible
+      const format = image.file.type === 'image/png' ? 'image/png' : 'image/jpeg';
+      const quality = format === 'image/jpeg' ? 0.95 : undefined;
+      
+      resolve({
+        dataUrl: canvas.toDataURL(format, quality),
+        width: img.width,
+        height: img.height,
+      });
+    };
+    img.onerror = () => reject(new Error('Failed to load image'));
+    img.src = image.preview;
+  });
+};
+
+// Get jsPDF format from MIME type
+const getImageFormat = (mimeType: string): 'JPEG' | 'PNG' | 'WEBP' => {
+  if (mimeType === 'image/png') return 'PNG';
+  if (mimeType === 'image/webp') return 'WEBP';
+  return 'JPEG';
 };
 
 export const downloadPDF = (blob: Blob, filename: string = 'images.pdf'): void => {

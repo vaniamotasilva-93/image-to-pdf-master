@@ -10,6 +10,7 @@ export type PageSize = 'a4' | 'letter';
 export type PageOrientation = 'portrait' | 'landscape';
 export type ImageFitMode = 'fit' | 'fill' | 'original';
 
+export type ConversionMode = 'direct' | 'optimized';
 export type CompressionPreset = 'high' | 'balanced' | 'small' | 'verySmall';
 
 export interface CompressionConfig {
@@ -54,6 +55,7 @@ export interface PDFSettings {
   orientation: PageOrientation;
   fitMode: ImageFitMode;
   marginMm: number;
+  conversionMode: ConversionMode;
   compression: CompressionPreset;
 }
 
