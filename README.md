@@ -1,73 +1,76 @@
-# Welcome to your Lovable project
+# Image to PDF Converter
 
-## Project info
+A secure, privacy-focused web application that converts multiple images into a single PDF file. All processing happens entirely in your browser—no images are ever uploaded to any server.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+## Features
 
-## How can I edit this code?
+- **Multi-image upload**: Drag & drop or file picker
+- **Image management**: Reorder via drag & drop, remove individual images, preview thumbnails
+- **PDF configuration**:
+  - Page size: A4 or Letter
+  - Orientation: Portrait or Landscape
+  - Image fit mode: Fit to page, Fill page, or Original size centered
+  - Adjustable margins (0-30mm)
+- **Performance**: Handles up to 20 images, 10MB each
+- **Accessibility**: Keyboard navigable, WCAG 2.1 AA compliant, proper ARIA labels
 
-There are several ways of editing your application.
+## How It Works
 
-**Use Lovable**
+1. **Upload**: Images are loaded into browser memory using the File API
+2. **Preview**: Object URLs are created for thumbnail previews (never leaves browser)
+3. **Reorder**: Drag & drop uses @dnd-kit for smooth, accessible reordering
+4. **Convert**: jsPDF library generates the PDF entirely in JavaScript
+5. **Download**: The PDF blob is offered as a download via a temporary link
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+No server communication occurs at any point.
 
-Changes made via Lovable will be committed automatically to this repo.
+## Libraries Used
 
-**Use your preferred IDE**
+- **jsPDF** (v2.x) - Client-side PDF generation
+- **@dnd-kit** - Accessible drag & drop toolkit
+- **React** - UI framework
+- **Tailwind CSS** - Styling
+- **Lucide React** - Icons
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+## Privacy & Data Handling
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+### What we DO:
+- Process images entirely in your browser
+- Generate PDFs using client-side JavaScript
+- Offer direct download of generated files
 
-Follow these steps:
+### What we DON'T do:
+- Upload images to any server
+- Store any user data
+- Use cookies for tracking
+- Include analytics or advertising
+- Log or monitor image content
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+### Compliance
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+This application is designed to comply with:
+- **GDPR** (EU Regulation 2016/679) - No personal data processing occurs
+- **Portuguese Data Protection Law** (Lei n.º 58/2019) - No data leaves your device
 
-# Step 3: Install the necessary dependencies.
-npm i
+Since no data is collected, stored, or transmitted, there is no data controller or processor relationship established.
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
+## Running Locally
+
+```bash
+# Install dependencies
+npm install
+
+# Start development server
 npm run dev
+
+# Build for production
+npm run build
 ```
 
-**Edit a file directly in GitHub**
+## Browser Support
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+Works in all modern browsers (Chrome, Firefox, Safari, Edge). Requires JavaScript enabled.
 
-**Use GitHub Codespaces**
+## License
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
-
-## What technologies are used for this project?
-
-This project is built with:
-
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+Free to use. No watermarks, no login required, no tracking.
