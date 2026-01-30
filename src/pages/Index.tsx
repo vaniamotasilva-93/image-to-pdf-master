@@ -115,7 +115,7 @@ const Index = () => {
                 <FileImage className="w-5 h-5 text-primary-foreground" aria-hidden="true" />
               </div>
               <div>
-                <h1 className="text-xl font-bold text-foreground">Image to PDF</h1>
+                <h1 className="text-xl font-bold text-foreground">Files Converter</h1>
                 <p className="text-xs text-muted-foreground">Free • Private • No upload</p>
               </div>
             </div>
