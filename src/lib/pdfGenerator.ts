@@ -5,31 +5,7 @@ import {
   PAGE_DIMENSIONS,
   ConversionProgress 
 } from '@/types/image';
-
-// Convert mm to points (jsPDF uses points internally for some operations)
-const mmToPoints = (mm: number): number => mm * 2.83465;
-
-// Get image dimensions from data URL
-const getImageDimensions = (dataUrl: string): Promise<{ width: number; height: number }> => {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    img.onload = () => {
-      resolve({ width: img.naturalWidth, height: img.naturalHeight });
-    };
-    img.onerror = reject;
-    img.src = dataUrl;
-  });
-};
-
-// Read file as data URL
-const readFileAsDataURL = (file: File): Promise<string> => {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result as string);
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-};
+import { compressImage, CompressedImage } from '@/lib/imageCompressor';
 
 // Calculate image position and size based on fit mode
 const calculateImagePlacement = (
@@ -55,11 +31,9 @@ const calculateImagePlacement = (
     case 'fit':
       // Fit entire image within page, maintaining aspect ratio
       if (imgAspect > pageAspect) {
-        // Image is wider than page
         width = availableWidth;
         height = width / imgAspect;
       } else {
-        // Image is taller than page
         height = availableHeight;
         width = height * imgAspect;
       }
@@ -70,11 +44,9 @@ const calculateImagePlacement = (
     case 'fill':
       // Fill page, cropping if necessary (image centered)
       if (imgAspect > pageAspect) {
-        // Image is wider, fit by height
         height = availableHeight;
         width = height * imgAspect;
       } else {
-        // Image is taller, fit by width
         width = availableWidth;
         height = width / imgAspect;
       }
@@ -84,12 +56,10 @@ const calculateImagePlacement = (
 
     case 'original':
       // Original size, centered (may overflow page)
-      // Convert pixels to mm (assuming 96 DPI)
       const pixelsToMm = 25.4 / 96;
       width = imgWidth * pixelsToMm;
       height = imgHeight * pixelsToMm;
       
-      // If larger than available space, scale down
       if (width > availableWidth || height > availableHeight) {
         const scale = Math.min(availableWidth / width, availableHeight / height);
         width *= scale;
@@ -115,17 +85,15 @@ export const generatePDF = async (
   settings: PDFSettings,
   onProgress?: (progress: ConversionProgress) => void
 ): Promise<Blob> => {
-  const { pageSize, orientation, fitMode, marginMm } = settings;
+  const { pageSize, orientation, fitMode, marginMm, compression } = settings;
   
   // Get page dimensions
   let { width: pageWidth, height: pageHeight } = PAGE_DIMENSIONS[pageSize];
   
-  // Swap dimensions for landscape
   if (orientation === 'landscape') {
     [pageWidth, pageHeight] = [pageHeight, pageWidth];
   }
 
-  // Create PDF
   const pdf = new jsPDF({
     orientation: orientation === 'landscape' ? 'l' : 'p',
     unit: 'mm',
@@ -133,54 +101,57 @@ export const generatePDF = async (
   });
 
   const total = images.length;
+  const compressedImages: CompressedImage[] = [];
 
+  // Phase 1: Compress all images
   for (let i = 0; i < images.length; i++) {
     const image = images[i];
     
-    // Report progress
+    onProgress?.({
+      current: i + 1,
+      total,
+      status: 'compressing',
+      message: `Compressing ${image.name}...`,
+    });
+
+    try {
+      const compressed = await compressImage(image, compression);
+      compressedImages.push(compressed);
+    } catch (error) {
+      console.error(`Error compressing image ${image.name}:`, error);
+      throw new Error(`Failed to compress image: ${image.name}`);
+    }
+  }
+
+  // Phase 2: Generate PDF from compressed images
+  for (let i = 0; i < compressedImages.length; i++) {
+    const compressed = compressedImages[i];
+    const originalImage = images[i];
+    
     onProgress?.({
       current: i + 1,
       total,
       status: 'processing',
-      message: `Processing ${image.name}...`,
+      message: `Adding ${originalImage.name} to PDF...`,
     });
 
     try {
-      // Read image file
-      const dataUrl = await readFileAsDataURL(image.file);
-      
-      // Get image dimensions
-      const imgDimensions = await getImageDimensions(dataUrl);
-      
-      // Calculate placement
       const placement = calculateImagePlacement(
-        imgDimensions.width,
-        imgDimensions.height,
+        compressed.width,
+        compressed.height,
         pageWidth,
         pageHeight,
         marginMm,
         fitMode
       );
 
-      // Add new page for all images except the first
       if (i > 0) {
         pdf.addPage();
       }
 
-      // Determine image format from file type
-      let format = 'JPEG';
-      if (image.file.type === 'image/png') {
-        format = 'PNG';
-      } else if (image.file.type === 'image/webp') {
-        // jsPDF doesn't natively support WebP, but modern browsers can handle it
-        // through the canvas. We'll convert WebP to PNG/JPEG via canvas.
-        format = 'PNG';
-      }
-
-      // Add image to PDF
       pdf.addImage(
-        dataUrl,
-        format,
+        compressed.dataUrl,
+        'JPEG',
         placement.x,
         placement.y,
         placement.width,
@@ -189,12 +160,11 @@ export const generatePDF = async (
         'MEDIUM'
       );
     } catch (error) {
-      console.error(`Error processing image ${image.name}:`, error);
-      throw new Error(`Failed to process image: ${image.name}`);
+      console.error(`Error adding image ${originalImage.name} to PDF:`, error);
+      throw new Error(`Failed to add image to PDF: ${originalImage.name}`);
     }
   }
 
-  // Report completion
   onProgress?.({
     current: total,
     total,
@@ -202,7 +172,6 @@ export const generatePDF = async (
     message: 'PDF generated successfully!',
   });
 
-  // Return as blob
   return pdf.output('blob');
 };
 

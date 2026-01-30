@@ -16,19 +16,21 @@ export const ConversionProgress = ({ progress }: ConversionProgressProps) => {
     return null;
   }
 
+  const isCompressing = progress.status === 'compressing';
+
   return (
     <div 
       className={cn(
         "p-4 rounded-lg border animate-fade-in",
         progress.status === 'complete' && "bg-success/10 border-success/30",
-        progress.status === 'processing' && "bg-primary/5 border-primary/20",
+        (progress.status === 'processing' || progress.status === 'compressing') && "bg-primary/5 border-primary/20",
         progress.status === 'error' && "bg-destructive/10 border-destructive/30"
       )}
       role="status"
       aria-live="polite"
     >
       <div className="flex items-center gap-3">
-        {progress.status === 'processing' && (
+        {(progress.status === 'processing' || progress.status === 'compressing') && (
           <Loader2 className="w-5 h-5 text-primary animate-spin" aria-hidden="true" />
         )}
         {progress.status === 'complete' && (
@@ -42,13 +44,13 @@ export const ConversionProgress = ({ progress }: ConversionProgressProps) => {
           <p className={cn(
             "text-sm font-medium",
             progress.status === 'complete' && "text-success",
-            progress.status === 'processing' && "text-foreground",
+            (progress.status === 'processing' || progress.status === 'compressing') && "text-foreground",
             progress.status === 'error' && "text-destructive"
           )}>
             {progress.message || `Processing image ${progress.current} of ${progress.total}`}
           </p>
           
-          {progress.status === 'processing' && (
+          {(progress.status === 'processing' || progress.status === 'compressing') && (
             <div className="mt-2 relative">
               <Progress value={percentage} className="h-2" />
               <span className="sr-only">{percentage}% complete</span>
@@ -56,7 +58,7 @@ export const ConversionProgress = ({ progress }: ConversionProgressProps) => {
           )}
         </div>
 
-        {progress.status === 'processing' && (
+        {(progress.status === 'processing' || progress.status === 'compressing') && (
           <span className="text-sm text-muted-foreground">
             {percentage}%
           </span>

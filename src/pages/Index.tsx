@@ -1,13 +1,15 @@
 import { useState, useCallback, useEffect } from 'react';
-import { ImageFile, PDFSettings as PDFSettingsType, ConversionProgress as ProgressType } from '@/types/image';
+import { ImageFile, PDFSettings as PDFSettingsType, ConversionProgress as ProgressType, CompressionPreset } from '@/types/image';
 import { generatePDF, downloadPDF } from '@/lib/pdfGenerator';
 import { ImageUploader } from '@/components/ImageUploader';
 import { ImageList } from '@/components/ImageList';
 import { PDFSettings } from '@/components/PDFSettings';
+import { CompressionSettings } from '@/components/CompressionSettings';
+import { SizeEstimate } from '@/components/SizeEstimate';
 import { ConversionProgress } from '@/components/ConversionProgress';
 import { ConvertButton } from '@/components/ConvertButton';
 import { PrivacyNotice } from '@/components/PrivacyNotice';
-import { FileImage, Github } from 'lucide-react';
+import { FileImage, Shield } from 'lucide-react';
 import { toast } from 'sonner';
 
 const DEFAULT_SETTINGS: PDFSettingsType = {
@@ -15,6 +17,7 @@ const DEFAULT_SETTINGS: PDFSettingsType = {
   orientation: 'portrait',
   fitMode: 'fit',
   marginMm: 10,
+  compression: 'balanced',
 };
 
 const Index = () => {
@@ -59,15 +62,18 @@ const Index = () => {
     setProgress({ current: 0, total: 0, status: 'idle' });
   }, [images]);
 
+  const handleCompressionChange = useCallback((preset: CompressionPreset) => {
+    setSettings((prev) => ({ ...prev, compression: preset }));
+  }, []);
+
   const handleConvert = async () => {
     if (images.length === 0) return;
 
     try {
-      setProgress({ current: 0, total: images.length, status: 'processing' });
+      setProgress({ current: 0, total: images.length, status: 'compressing' });
       
       const blob = await generatePDF(images, settings, setProgress);
       
-      // Generate filename with timestamp
       const timestamp = new Date().toISOString().slice(0, 10);
       const filename = `images-${timestamp}.pdf`;
       
@@ -90,7 +96,7 @@ const Index = () => {
     }
   };
 
-  const isConverting = progress.status === 'processing';
+  const isConverting = progress.status === 'processing' || progress.status === 'compressing';
 
   return (
     <div className="min-h-screen bg-background">
@@ -157,6 +163,19 @@ const Index = () => {
                 disabled={isConverting}
               />
 
+              <CompressionSettings
+                preset={settings.compression}
+                onPresetChange={handleCompressionChange}
+                disabled={isConverting}
+              />
+
+              {images.length > 0 && (
+                <SizeEstimate
+                  images={images}
+                  preset={settings.compression}
+                />
+              )}
+
               <ConvertButton
                 onClick={handleConvert}
                 disabled={isConverting || images.length === 0}
@@ -187,8 +206,5 @@ const Index = () => {
     </div>
   );
 };
-
-// Import Shield for footer
-import { Shield } from 'lucide-react';
 
 export default Index;

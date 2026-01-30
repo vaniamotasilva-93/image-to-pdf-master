@@ -10,17 +10,57 @@ export type PageSize = 'a4' | 'letter';
 export type PageOrientation = 'portrait' | 'landscape';
 export type ImageFitMode = 'fit' | 'fill' | 'original';
 
+export type CompressionPreset = 'high' | 'balanced' | 'small' | 'verySmall';
+
+export interface CompressionConfig {
+  maxDimension: number;
+  quality: number;
+  label: string;
+  description: string;
+  warning?: string;
+}
+
+export const COMPRESSION_PRESETS: Record<CompressionPreset, CompressionConfig> = {
+  high: {
+    maxDimension: 4000,
+    quality: 0.92,
+    label: 'High quality',
+    description: 'Larger file size',
+  },
+  balanced: {
+    maxDimension: 2500,
+    quality: 0.85,
+    label: 'Balanced',
+    description: 'Good quality, smaller file',
+  },
+  small: {
+    maxDimension: 1800,
+    quality: 0.75,
+    label: 'Small size',
+    description: 'Reduced quality',
+    warning: 'May reduce clarity of fine details and text in images',
+  },
+  verySmall: {
+    maxDimension: 1200,
+    quality: 0.60,
+    label: 'Very small',
+    description: 'Aggressive compression',
+    warning: 'May visibly degrade text and detailed graphics',
+  },
+};
+
 export interface PDFSettings {
   pageSize: PageSize;
   orientation: PageOrientation;
   fitMode: ImageFitMode;
   marginMm: number;
+  compression: CompressionPreset;
 }
 
 export interface ConversionProgress {
   current: number;
   total: number;
-  status: 'idle' | 'processing' | 'complete' | 'error';
+  status: 'idle' | 'processing' | 'compressing' | 'complete' | 'error';
   message?: string;
 }
 
