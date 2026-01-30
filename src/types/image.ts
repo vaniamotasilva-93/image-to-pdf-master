@@ -12,6 +12,7 @@ export type ImageFitMode = 'fit' | 'fill' | 'original';
 
 export type ConversionMode = 'direct' | 'optimized';
 export type CompressionPreset = 'high' | 'balanced' | 'small' | 'verySmall';
+export type PageLayout = 'separate' | 'combined';
 
 export interface CompressionConfig {
   maxDimension: number;

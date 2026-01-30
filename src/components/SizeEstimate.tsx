@@ -1,17 +1,20 @@
 import { useMemo } from 'react';
-import { ImageFile, CompressionPreset } from '@/types/image';
-import { estimatePDFSize, formatFileSize } from '@/lib/imageCompressor';
+import { ImageFile, CompressionPreset, ConversionMode } from '@/types/image';
+import { estimatePDFSize, estimateDirectPDFSize, formatFileSize } from '@/lib/imageCompressor';
 import { FileOutput } from 'lucide-react';
 
 interface SizeEstimateProps {
   images: ImageFile[];
   preset: CompressionPreset;
+  conversionMode: ConversionMode;
 }
 
-export const SizeEstimate = ({ images, preset }: SizeEstimateProps) => {
+export const SizeEstimate = ({ images, preset, conversionMode }: SizeEstimateProps) => {
   const estimatedSize = useMemo(
-    () => estimatePDFSize(images, preset),
-    [images, preset]
+    () => conversionMode === 'direct' 
+      ? estimateDirectPDFSize(images)
+      : estimatePDFSize(images, preset),
+    [images, preset, conversionMode]
   );
 
   const originalSize = useMemo(
@@ -23,7 +26,8 @@ export const SizeEstimate = ({ images, preset }: SizeEstimateProps) => {
     return null;
   }
 
-  const savings = originalSize > 0 
+  // Only show savings for optimized mode
+  const savings = conversionMode === 'optimized' && originalSize > 0 
     ? Math.round((1 - estimatedSize / originalSize) * 100)
     : 0;
 
