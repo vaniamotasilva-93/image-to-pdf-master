@@ -1,8 +1,8 @@
 import * as pdfjsLib from 'pdfjs-dist';
 import { PDFFile, ExtractedImage, PDFToImageSettings, ImageOutputFormat } from '@/types/converter';
 
-// Set the worker source
-pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+// Set the worker source using unpkg for reliable version matching
+pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
 
 export const loadPDF = async (file: File): Promise<{ pageCount: number; pdf: pdfjsLib.PDFDocumentProxy }> => {
   const arrayBuffer = await file.arrayBuffer();
