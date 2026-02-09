@@ -1,5 +1,5 @@
 import { ConversionDirection } from '@/types/converter';
-import { FileImage, FileText, ArrowRight, Minimize2 } from 'lucide-react';
+import { FileImage, FileText, ArrowRight, Minimize2, Eraser } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface ConversionDirectionToggleProps {
@@ -8,10 +8,11 @@ interface ConversionDirectionToggleProps {
   disabled?: boolean;
 }
 
-const tabs: { value: ConversionDirection; label: string; icons: 'img-to-pdf' | 'pdf-to-img' | 'compress' }[] = [
+const tabs: { value: ConversionDirection; label: string; icons: 'img-to-pdf' | 'pdf-to-img' | 'compress' | 'remove-bg' }[] = [
   { value: 'image-to-pdf', label: 'Image to PDF', icons: 'img-to-pdf' },
   { value: 'pdf-to-image', label: 'PDF to Image', icons: 'pdf-to-img' },
   { value: 'compress-pdf', label: 'Compress PDF', icons: 'compress' },
+  { value: 'remove-bg', label: 'Remove BG', icons: 'remove-bg' },
 ];
 
 export const ConversionDirectionToggle = ({ 
@@ -52,6 +53,9 @@ export const ConversionDirectionToggle = ({
           )}
           {tab.icons === 'compress' && (
             <Minimize2 className="w-4 h-4" aria-hidden="true" />
+          )}
+          {tab.icons === 'remove-bg' && (
+            <Eraser className="w-4 h-4" aria-hidden="true" />
           )}
           <span className="hidden sm:inline">{tab.label}</span>
         </button>
