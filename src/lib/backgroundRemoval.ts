@@ -98,6 +98,8 @@ export async function removeImageBackground(
   const resized = await resizeImage(file, profile.maxDimension);
 
   const config: Config = {
+    publicPath: 'https://staticimgly.com/@imgly/background-removal-data/1.7.0/dist/',
+    device: 'cpu',
     output: {
       format: 'image/png',
       quality: 1,
