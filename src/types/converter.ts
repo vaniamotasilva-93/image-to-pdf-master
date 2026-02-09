@@ -1,4 +1,4 @@
-export type ConversionDirection = 'image-to-pdf' | 'pdf-to-image' | 'compress-pdf';
+export type ConversionDirection = 'image-to-pdf' | 'pdf-to-image' | 'compress-pdf' | 'remove-bg';
 
 export type ImageOutputFormat = 'png' | 'jpeg' | 'webp';
 
