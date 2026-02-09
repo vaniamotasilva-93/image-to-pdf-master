@@ -1,5 +1,6 @@
 import { useCallback, useRef, useState } from 'react';
 import { Upload, ImagePlus, AlertCircle } from 'lucide-react';
+import { isValidImageFile } from '@/lib/fileValidation';
 import { 
   SUPPORTED_FORMATS, 
   SUPPORTED_EXTENSIONS, 
@@ -21,7 +22,7 @@ export const ImageUploader = ({ images, onImagesAdd, disabled }: ImageUploaderPr
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const validateAndProcessFiles = useCallback((files: FileList | File[]) => {
+  const validateAndProcessFiles = useCallback(async (files: FileList | File[]) => {
     setError(null);
     const fileArray = Array.from(files);
     
@@ -36,9 +37,16 @@ export const ImageUploader = ({ images, onImagesAdd, disabled }: ImageUploaderPr
     const errors: string[] = [];
 
     for (const file of fileArray) {
-      // Check format
+      // Check format (MIME)
       if (!SUPPORTED_FORMATS.includes(file.type)) {
         errors.push(`${file.name}: Unsupported format. Use JPG, PNG, or WebP.`);
+        continue;
+      }
+
+      // Verify actual file content via magic bytes
+      const validContent = await isValidImageFile(file);
+      if (!validContent) {
+        errors.push(`${file.name}: File content does not match a supported image format.`);
         continue;
       }
 
