@@ -17,6 +17,7 @@ import { ConversionDirectionToggle } from '@/components/ConversionDirectionToggl
 import { PDFUploader } from '@/components/PDFUploader';
 import { PDFToImageSettings as PDFToImageSettingsComponent } from '@/components/PDFToImageSettings';
 import { ExtractedImagesList } from '@/components/ExtractedImagesList';
+import { PDFCompressorView } from '@/components/PDFCompressorView';
 import { PrivacyNotice } from '@/components/PrivacyNotice';
 import { FileImage, Shield, FileText, ArrowLeftRight } from 'lucide-react';
 import { toast } from 'sonner';
@@ -191,6 +192,12 @@ const Index = () => {
       return {
         title: 'Convert Images to PDF',
         description: 'Drag & drop your images, arrange them in order, and download a single PDF.',
+      };
+    }
+    if (conversionDirection === 'compress-pdf') {
+      return {
+        title: 'Compress PDF',
+        description: 'Upload a PDF and get a reduced-size version instantly.',
       };
     }
     return {
@@ -370,6 +377,11 @@ const Index = () => {
                 <ConversionProgress progress={progress} />
               </div>
             </div>
+          )}
+
+          {/* Compress PDF Mode */}
+          {conversionDirection === 'compress-pdf' && (
+            <PDFCompressorView />
           )}
         </div>
       </main>
