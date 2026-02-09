@@ -1,8 +1,8 @@
 import * as pdfjsLib from 'pdfjs-dist';
 import jsPDF from 'jspdf';
 
-// Worker already configured in pdfToImage.ts, but ensure it's set here too
-pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
+// Self-hosted worker for security (avoids CDN supply chain risk)
+pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
 
 export interface CompressionResult {
   blob: Blob;

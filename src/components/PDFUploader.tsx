@@ -4,6 +4,7 @@ import { FileText, Upload, AlertCircle } from 'lucide-react';
 import { PDFFile } from '@/types/converter';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { isValidPDFFile } from '@/lib/fileValidation';
 
 interface PDFUploaderProps {
   pdfFile: PDFFile | null;
@@ -14,7 +15,7 @@ interface PDFUploaderProps {
 const MAX_FILE_SIZE_MB = 50;
 
 export const PDFUploader = ({ pdfFile, onPDFAdd, disabled }: PDFUploaderProps) => {
-  const onDrop = useCallback((acceptedFiles: File[]) => {
+  const onDrop = useCallback(async (acceptedFiles: File[]) => {
     if (acceptedFiles.length === 0) return;
     
     const file = acceptedFiles[0];
@@ -23,6 +24,15 @@ export const PDFUploader = ({ pdfFile, onPDFAdd, disabled }: PDFUploaderProps) =
     if (file.size > MAX_FILE_SIZE_MB * 1024 * 1024) {
       toast.error(`File too large`, {
         description: `Maximum size is ${MAX_FILE_SIZE_MB}MB`,
+      });
+      return;
+    }
+
+    // Validate actual file content via magic bytes
+    const validContent = await isValidPDFFile(file);
+    if (!validContent) {
+      toast.error('Invalid file', {
+        description: 'File content does not match PDF format.',
       });
       return;
     }
