@@ -1,4 +1,7 @@
-import { removeBackground, Config } from '@imgly/background-removal';
+import { pipeline, env, RawImage } from '@huggingface/transformers';
+
+// Disable local model check – always fetch from HF Hub
+env.allowLocalModels = false;
 
 export type ResolutionProfile = 'high' | 'medium' | 'low';
 
@@ -39,6 +42,22 @@ export interface BgRemovalResult {
   height: number;
 }
 
+// Lazy-loaded singleton segmentation pipeline
+let segmentatorPromise: Promise<any> | null = null;
+
+function getSegmentator() {
+  if (!segmentatorPromise) {
+    segmentatorPromise = pipeline('image-segmentation', 'briaai/RMBG-1.4', {
+      device: 'webgpu' in navigator ? 'webgpu' : 'wasm',
+    }).catch((err) => {
+      // Reset so next call retries
+      segmentatorPromise = null;
+      throw err;
+    });
+  }
+  return segmentatorPromise;
+}
+
 /**
  * Resize an image to fit within maxDimension while preserving aspect ratio.
  * Returns a Blob (PNG).
@@ -52,7 +71,6 @@ function resizeImage(file: File, maxDimension: number): Promise<Blob> {
       let { width, height } = img;
 
       if (width <= maxDimension && height <= maxDimension) {
-        // No resize needed – convert to blob via canvas to normalise format
         const canvas = document.createElement('canvas');
         canvas.width = width;
         canvas.height = height;
@@ -88,7 +106,7 @@ function resizeImage(file: File, maxDimension: number): Promise<Blob> {
 }
 
 /**
- * Remove background from a single image.
+ * Remove background from a single image using briaai/RMBG-1.4 via Transformers.js.
  */
 export async function removeImageBackground(
   file: File,
@@ -97,17 +115,60 @@ export async function removeImageBackground(
   const profile = RESOLUTION_PROFILES[resolution];
   const resized = await resizeImage(file, profile.maxDimension);
 
-  const config: Config = {
-    publicPath: 'https://staticimgly.com/@imgly/background-removal-data/1.7.0/dist/',
-    device: 'cpu',
-    output: {
-      format: 'image/png',
-      quality: 1,
-    },
-  };
+  // Load segmentation pipeline (cached after first call)
+  const segmentator = await getSegmentator();
 
-  const resultBlob = await removeBackground(resized, config);
-  return resultBlob;
+  // Create a data URL from the resized blob for the pipeline
+  const resizedUrl = URL.createObjectURL(resized);
+
+  try {
+    // Run segmentation – returns array with mask info
+    const output = await segmentator(resizedUrl, {
+      threshold: 0.5,
+      mask_threshold: 0.5,
+    });
+
+    // The pipeline returns an array; the first element has the mask as a RawImage
+    const maskData = output[0]?.mask;
+    if (!maskData) {
+      throw new Error('Segmentation returned no mask');
+    }
+
+    // Draw original image on canvas, then apply mask as alpha
+    const origImg = await createImageBitmap(resized);
+    const { width, height } = origImg;
+
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d')!;
+
+    // Draw original
+    ctx.drawImage(origImg, 0, 0);
+
+    // Get image data to apply alpha mask
+    const imageData = ctx.getImageData(0, 0, width, height);
+
+    // Resize mask to match canvas dimensions
+    const maskResized = await maskData.resize(width, height);
+    const maskPixels = maskResized.data; // Uint8Array, 1 channel per pixel
+
+    // Apply mask as alpha channel
+    for (let i = 0; i < maskPixels.length; i++) {
+      imageData.data[i * 4 + 3] = maskPixels[i]; // set alpha
+    }
+
+    ctx.putImageData(imageData, 0, 0);
+
+    return new Promise<Blob>((resolve, reject) => {
+      canvas.toBlob((blob) => {
+        if (blob) resolve(blob);
+        else reject(new Error('Canvas toBlob failed'));
+      }, 'image/png');
+    });
+  } finally {
+    URL.revokeObjectURL(resizedUrl);
+  }
 }
 
 /**
